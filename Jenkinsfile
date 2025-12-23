@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-repo/hello-world.git'
+                git branch: 'main', url: 'https://github.com/KoniPN/pscp.git'
             }
         }
         
@@ -34,7 +34,7 @@ pipeline {
                 sh """
                     sed -i 's|image: .*|image: ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}|' deployment.yaml
                 """
-                // Push กลับไป Git เพื่อให้ ArgoCD ดึงไป Deploy
+                
                 sh """
                     git config user.email "jenkins@example.com"
                     git config user.name "Jenkins"
