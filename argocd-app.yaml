@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://git.amaze-x.com/intern/hello-world.git  # <-- เปลี่ยนเป็น Repo ของคุณ
-    targetRevision: main
+    repoURL: https://github.com/KoniPN/pscp.git  # <-- เปลี่ยนเป็น Repo ของคุณ
+    targetRevision: master
     path: .
   destination:
     server: https://kubernetes.default.svc
