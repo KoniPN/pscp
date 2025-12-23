@@ -1,34 +1,4 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hello-world
-  namespace: default
-  labels:
-    app: hello-world
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: hello-world
-  template:
-    metadata:
-      labels:
-        app: hello-world
-    spec:
-      containers:
-        - name: nginx
-          image: konipn/hello-world:v1 # <-- เปลี่ยนเป็น Docker Hub ของคุณ
-          ports:
-            - containerPort: 80
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "64Mi"
-            limits:
-              cpu: "100m"
-              memory: "128Mi"
 
----
 apiVersion: v1
 kind: Service
 metadata:

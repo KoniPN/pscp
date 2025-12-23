@@ -14,16 +14,23 @@ pipeline {
         )
     }
     
-    environment {
-        DOCKER_HUB_USER = 'konipn'  // <-- เปลี่ยนเป็นของคุณ
-        IMAGE_NAME = 'hello-world'
-        IMAGE_TAG = "${params.VERSION}-${BUILD_NUMBER}"
-    }
-    
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Fetch index.html from GitHub') {
+            steps {
+                script {
+                    // ดึง index.html ล่าสุดจาก GitHub
+                    sh """
+                        curl -o index.html https://raw.githubusercontent.com/KoniPN/pscp/master/index.html
+                    """
+                    echo "Fetched index.html from GitHub:"
+                    sh "cat index.html"
+                }
             }
         }
         
@@ -32,8 +39,8 @@ pipeline {
                 script {
                     // แก้ไขข้อความใน index.html
                     sh """
-                        sed -i '' 's|<h1>.*</h1>|<h1>${params.CUSTOM_MESSAGE}</h1>|g' index.html
-                        sed -i '' 's|<p>Version:.*</p>|<p>Version: ${params.VERSION}</p>|g' index.html
+                        sed -i 's|<h1>.*</h1>|<h1>${params.CUSTOM_MESSAGE}</h1>|g' index.html
+                        sed -i 's|<p>Version:.*</p>|<p>Version: ${params.VERSION}</p>|g' index.html
                     """
                     
                     // แสดงผลลัพธ์
@@ -42,35 +49,13 @@ pipeline {
                 }
             }
         }
+
         
-        stage('Build Docker Image') {
-            steps {
-                sh "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ."
-                sh "docker tag ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
-            }
-        }
-        
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
-                    sh "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
-                }
-            }
-        }
+
         
         stage('Update Kubernetes Manifest') {
             steps {
                 script {
-                    // อัปเดต image tag ใน deployment.yaml
-                    sh """
-                        sed -i '' 's|image: .*|image: ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}|g' deployment.yaml
-                    """
                     
                     // Commit และ Push กลับไป Git (สำหรับ ArgoCD)
                     withCredentials([usernamePassword(
