@@ -4,7 +4,7 @@ import os
 app = Flask(__name__)
 
 # ข้อความที่จะแสดง - สามารถเปลี่ยนได้ผ่าน Jenkins CI
-MESSAGE = os.getenv("HELLO_MESSAGE", "Hello from Jenkins CI/CD Pipeline!")
+MESSAGE = os.getenv("HELLO_MESSAGE")
 
 @app.route('/')
 def hello():
