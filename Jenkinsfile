@@ -1,10 +1,15 @@
 pipeline {
     agent any
 
+    environment {
+        REPO_URL = 'https://github.com/KoniPN/pscp.git'
+        BRANCH = 'main'
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Pull Repository') {
             steps {
-                checkout scm
+                git branch: "${BRANCH}", url: "${REPO_URL}"
             }
         }
 
@@ -28,14 +33,26 @@ pipeline {
                 sh 'cat app.py'
             }
         }
+
+        stage('Push Changes') {
+            steps {
+                sh '''
+                    git config user.email "jenkins@example.com"
+                    git config user.name "Jenkins"
+                    git add app.py
+                    git commit -m "Updated app.py via Jenkins"
+                    git push origin ${BRANCH}
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'app.py has been successfully edited!'
+            echo 'app.py has been successfully edited and changes pushed!'
         }
         failure {
-            echo 'Failed to edit app.py'
+            echo 'Failed to edit app.py or push changes'
         }
     }
 }
