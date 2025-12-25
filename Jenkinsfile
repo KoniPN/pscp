@@ -2,14 +2,13 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/KoniPN/pscp.git'
-        BRANCH = 'main'
+        BRANCH = 'master'
     }
 
     stages {
-        stage('Pull Repository') {
+        stage('Checkout') {
             steps {
-                git branch: "${BRANCH}", url: "${REPO_URL}"
+                checkout scm
             }
         }
 
@@ -36,13 +35,15 @@ pipeline {
 
         stage('Push Changes') {
             steps {
-                sh '''
-                    git config user.email "jenkins@example.com"
-                    git config user.name "Jenkins"
-                    git add app.py
-                    git commit -m "Updated app.py via Jenkins"
-                    git push origin ${BRANCH}
-                '''
+                withCredentials([usernamePassword(credentialsId: 'b448d28b-3cb8-4fb4-bea8-bc0326945a2c', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    sh '''
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins"
+                        git add app.py
+                        git commit -m "Updated app.py via Jenkins" || echo "No changes to commit"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/KoniPN/pscp.git HEAD:${BRANCH}
+                    '''
+                }
             }
         }
     }
