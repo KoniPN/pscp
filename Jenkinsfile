@@ -5,6 +5,10 @@ pipeline {
         BRANCH = 'master'
     }
 
+    parameters {
+        string(name: 'NEW_MESSAGE', defaultValue: 'Hello World from Kubernetes!', description: 'Enter the new message to display')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -12,40 +16,32 @@ pipeline {
             }
         }
 
-        stage('List Files') {
+        stage('Input Message') {
             steps {
-                sh 'ls -la'
-                sh 'find . -name "*.py" -type f'
+                script {
+                    echo "New message will be: ${params.NEW_MESSAGE}"
+                }
             }
         }
 
-        stage('Edit app.py') {
+        stage('Edit ConfigMap') {
             steps {
                 script {
-                    // Check if app/app.py exists (correct path based on project structure)
-                    def fileExists = sh(script: 'test -f app/app.py && echo "true" || echo "false"', returnStdout: true).trim()
+                    // Read the configmap file
+                    def content = readFile('k8s/configmap.yaml')
                     
-                    if (fileExists == 'true') {
-                        // Read the file
-                        def content = readFile('app/app.py')
-                        
-                        // Edit the MESSAGE text in app.py
-                        def updatedContent = content.replace('Hello World from Kubernetes!', 'Hello from Jenkins CI/CD Pipeline!')
-                        
-                        // Write the updated content back
-                        writeFile file: 'app/app.py', text: updatedContent
-                    } else {
-                        echo 'app/app.py not found! Creating a new one...'
-                        sh 'mkdir -p app'
-                        writeFile file: 'app/app.py', text: '# New app.py created by Jenkins\nprint("Hello World")\n'
-                    }
+                    // Replace the HELLO_MESSAGE value with user input
+                    def updatedContent = content.replaceAll('HELLO_MESSAGE: ".*"', "HELLO_MESSAGE: \"${params.NEW_MESSAGE}\"")
+                    
+                    // Write the updated content back
+                    writeFile file: 'k8s/configmap.yaml', text: updatedContent
                 }
             }
         }
 
         stage('Verify Changes') {
             steps {
-                sh 'cat app/app.py'
+                sh 'cat k8s/configmap.yaml'
             }
         }
 
@@ -55,8 +51,8 @@ pipeline {
                     sh '''
                         git config user.email "jenkins@example.com"
                         git config user.name "Jenkins"
-                        git add app/app.py
-                        git commit -m "Updated app.py via Jenkins" || echo "No changes to commit"
+                        git add k8s/configmap.yaml
+                        git commit -m "Updated HELLO_MESSAGE to: ${NEW_MESSAGE}" || echo "No changes to commit"
                         git push https://${GIT_USER}:${GIT_PASS}@github.com/KoniPN/pscp.git HEAD:${BRANCH}
                     '''
                 }
@@ -66,10 +62,10 @@ pipeline {
 
     post {
         success {
-            echo 'app.py has been successfully edited and changes pushed!'
+            echo "Message successfully updated to: ${params.NEW_MESSAGE}"
         }
         failure {
-            echo 'Failed to edit app.py or push changes'
+            echo 'Failed to update message'
         }
     }
 }
