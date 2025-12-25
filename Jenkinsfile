@@ -1,56 +1,41 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml '''
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
-    tty: true
-'''
-        }
-    }
-    environment {
-        REPO_URL = 'https://github.com/KoniPN/pscp.git'
-    }
+    agent any
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: "${REPO_URL}", credentialsId: 'b448d28b-3cb8-4fb4-bea8-bc0326945a2c'
+                checkout scm
             }
         }
-        
-        stage('Modify Message') {
+
+        stage('Edit app.py') {
             steps {
                 script {
-                    def newMsg = "Hello World - Build #${env.BUILD_NUMBER}"
-                    sh """
-                    sed -i 's/return ".*"/return "${newMsg}"/' k8s/deployment.yaml || true
-                    """
-                    echo "Updated message to: ${newMsg}"
+                    // Read the file
+                    def content = readFile('app.py')
+                    
+                    // Edit text - replace 'old_text' with 'new_text'
+                    def updatedContent = content.replace('old_text', 'new_text')
+                    
+                    // Write the updated content back
+                    writeFile file: 'app.py', text: updatedContent
                 }
             }
         }
-        
-        stage('Commit & Push (GitOps)') {
+
+        stage('Verify Changes') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'b448d28b-3cb8-4fb4-bea8-bc0326945a2c', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
-                    sh '''
-                    git config user.email "jenkins@minikube.local"
-                    git config user.name "Jenkins Bot"
-                    
-                    if [ -n "$(git status --porcelain)" ]; then
-                        git add .
-                        git commit -m "Jenkins updated message to Build #${BUILD_NUMBER}"
-                        git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/KoniPN/pscp.git master
-                    else
-                        echo "No changes to commit"
-                    fi
-                    '''
-                }
+                sh 'cat app.py'
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'app.py has been successfully edited!'
+        }
+        failure {
+            echo 'Failed to edit app.py'
         }
     }
 }
