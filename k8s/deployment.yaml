@@ -22,8 +22,8 @@ spec:
     spec:
       containers:
         - name: hello-world
-          image: hello-world:latest # จะถูกอัพเดทโดย Jenkins CI
-          imagePullPolicy: IfNotPresent
+          image: myapp-hello-world:latest # จะถูกอัพเดทโดย Jenkins CI
+          imagePullPolicy: Never
           ports:
             - containerPort: 5000
               name: http
