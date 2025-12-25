@@ -1,0 +1,9 @@
+# ConfigMap สำหรับเก็บ configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-world-config
+  namespace: hello-world
+data:
+  HELLO_MESSAGE: "Hello World from Kubernetes!"
+  APP_ENV: "production"

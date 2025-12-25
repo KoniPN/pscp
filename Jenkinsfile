@@ -1,117 +1,95 @@
+// Jenkinsfile สำหรับ CI Pipeline
+// ใช้สำหรับ build, test และ push Docker image ไปยัง registry
+
 pipeline {
     agent any
     
-    parameters {
-        string(
-            name: 'CUSTOM_MESSAGE',
-            defaultValue: 'Hello World from DevOps Pipeline! 🚀',
-            description: 'ข้อความที่จะแสดงใน H1'
-        )
-        string(
-            name: 'VERSION',
-            defaultValue: 'v1',
-            description: 'Version ของ App'
-        )
-    }
-    
     environment {
-        NAMESPACE = 'default'
-        CONFIGMAP_NAME = 'hello-world-html'
+        // ตั้งค่า Docker registry (ใช้ Minikube's Docker daemon)
+        DOCKER_IMAGE = 'hello-world'
+        DOCKER_TAG = "${BUILD_NUMBER}"
+        // ข้อความที่จะแสดงใน Hello World (เปลี่ยนตรงนี้เพื่อ trigger CI)
+        HELLO_MESSAGE = 'Hello World from Jenkins CI!'
     }
     
     stages {
         stage('Checkout') {
             steps {
+                echo '📥 Checking out source code...'
                 checkout scm
             }
         }
-
-        stage('Create New HTML') {
+        
+        stage('Update Message') {
             steps {
-                script {
-                    // สร้าง index.html ใหม่ตาม Parameter
-                    def htmlContent = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Hello DevOps</title>
-</head>
-<body>
-    <h1>${params.CUSTOM_MESSAGE}</h1>
-    <p>Version: ${params.VERSION}</p>
-    <p>Build: #${BUILD_NUMBER}</p>
-    <p>Updated: ${new Date().format('yyyy-MM-dd HH:mm:ss')}</p>
-</body>
-</html>
-"""
-                    writeFile file: 'index.html', text: htmlContent
-                    echo "Created new index.html:"
-                    sh "cat index.html"
-                }
+                echo "📝 Updating hello message to: ${HELLO_MESSAGE}"
+                // อัพเดทข้อความใน deployment.yaml
+                sh """
+                    sed -i 's|value: ".*"  # เปลี่ยนข้อความตรงนี้|value: "${HELLO_MESSAGE}"  # เปลี่ยนข้อความตรงนี้|g' k8s/deployment.yaml
+                """
             }
         }
         
-        stage('Update ConfigMap in Kubernetes') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    // อัปเดต ConfigMap โดยตรงใน Kubernetes
-                    sh """
-                        kubectl create configmap ${CONFIGMAP_NAME} \
-                            --from-file=index.html=index.html \
-                            -n ${NAMESPACE} \
-                            --dry-run=client -o yaml | kubectl apply -f -
-                    """
-                    echo "✅ ConfigMap updated!"
-                }
+                echo '🐳 Building Docker image...'
+                // ใช้ Minikube's Docker daemon
+                sh '''
+                    eval $(minikube docker-env)
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                '''
             }
         }
         
-        stage('Restart Deployment') {
+        stage('Test') {
             steps {
-                script {
-                    // Restart Pods เพื่อให้โหลด ConfigMap ใหม่
-                    sh """
-                        kubectl rollout restart deployment/hello-world -n ${NAMESPACE}
-                    """
-                    echo "✅ Deployment restarted!"
-                    
-                    // รอให้ Pods พร้อม
-                    sh """
-                        kubectl rollout status deployment/hello-world -n ${NAMESPACE} --timeout=60s
-                    """
-                }
+                echo '🧪 Running tests...'
+                sh '''
+                    # ทดสอบว่า container รันได้
+                    eval $(minikube docker-env)
+                    docker run -d --name test-container -p 5001:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    sleep 5
+                    curl -f http://localhost:5001/health || exit 1
+                    docker stop test-container
+                    docker rm test-container
+                '''
             }
         }
         
-        stage('Commit to Git') {
+        stage('Update Kubernetes Manifest') {
             steps {
-                script {
-                    // Commit และ Push กลับไป Git (สำหรับ ArgoCD sync)
-                    withCredentials([usernamePassword(
-                        credentialsId: 'github-creds',
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )]) {
-                        sh """
-                            git config user.email "jenkins@example.com"
-                            git config user.name "Jenkins CI"
-                            git add index.html
-                            git commit -m "Update message: ${params.CUSTOM_MESSAGE} - Build #${BUILD_NUMBER}" || true
-                            git push https://${GIT_USER}:${GIT_PASS}@github.com/KoniPN/pscp.git master
-                        """
-                    }
-                }
+                echo '📦 Updating Kubernetes manifest with new image tag...'
+                sh """
+                    sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|g' k8s/deployment.yaml
+                """
+            }
+        }
+        
+        stage('Commit Changes') {
+            steps {
+                echo '📤 Committing updated manifest...'
+                sh '''
+                    git config user.email "jenkins@example.com"
+                    git config user.name "Jenkins CI"
+                    git add k8s/deployment.yaml
+                    git commit -m "CI: Update image to ${DOCKER_IMAGE}:${DOCKER_TAG}" || echo "No changes to commit"
+                    git push origin master || echo "Push failed - check credentials"
+                '''
             }
         }
     }
     
     post {
         success {
-            echo "✅ Build สำเร็จ! Message: ${params.CUSTOM_MESSAGE}"
-            echo "🌐 เข้าดูได้ที่: http://localhost:30080"
+            echo '✅ Pipeline succeeded! ArgoCD will now sync the changes.'
         }
         failure {
-            echo "❌ Build ล้มเหลว!"
+            echo '❌ Pipeline failed! Check the logs for details.'
+        }
+        always {
+            echo '🧹 Cleaning up...'
+            sh 'docker system prune -f || true'
         }
     }
 }

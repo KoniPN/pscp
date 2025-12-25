@@ -1,0 +1,8 @@
+# Kubernetes Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-world
+  labels:
+    app: hello-world
+    monitoring: enabled

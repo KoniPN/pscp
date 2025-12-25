@@ -1,0 +1,32 @@
+# ArgoCD Project สำหรับ Hello World
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: hello-world-project
+  namespace: argocd
+spec:
+  description: Project for Hello World Application
+
+  # Source repositories
+  sourceRepos:
+    - https://github.com/KoniPN/pscp.git
+    - "*" # หรือใช้ '*' เพื่ออนุญาตทุก repo
+
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: hello-world
+      server: https://kubernetes.default.svc
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+
+  # Allowed cluster resources
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: "*"
+      kind: "*"
+
+  # Allowed namespace resources
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

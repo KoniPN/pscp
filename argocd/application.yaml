@@ -1,0 +1,39 @@
+# ArgoCD Application สำหรับ Hello World Service
+# ArgoCD จะ sync Kubernetes manifests จาก Git repo โดยอัตโนมัติ
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-world
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Source: ที่อยู่ของ Git repository
+  source:
+    repoURL: https://github.com/KoniPN/pscp.git # เปลี่ยนเป็น repo ของคุณ
+    targetRevision: master
+    path: k8s # โฟลเดอร์ที่เก็บ Kubernetes manifests
+
+  # Destination: ที่จะ deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hello-world
+
+  # Sync Policy: ตั้งค่าการ sync อัตโนมัติ
+  syncPolicy:
+    automated:
+      prune: true # ลบ resources ที่ไม่มีใน Git
+      selfHeal: true # แก้ไขอัตโนมัติถ้ามีการเปลี่ยนแปลง
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

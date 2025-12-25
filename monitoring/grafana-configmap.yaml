@@ -1,0 +1,71 @@
+# Grafana Dashboard ConfigMap
+# สำหรับ auto-provisioning dashboard ไปยัง Grafana
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-world-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  hello-world-dashboard.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "percent"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"hello-world\", container=\"hello-world\"}[5m])) by (pod) * 100",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "title": "CPU Usage - Hello World Pods (%)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
+          "targets": [
+            {
+              "expr": "sum(container_memory_usage_bytes{namespace=\"hello-world\", container=\"hello-world\"}) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "title": "Memory Usage - Hello World Pods",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "10s",
+      "title": "Hello World Service Monitoring",
+      "uid": "hello-world-dashboard"
+    }
