@@ -12,24 +12,40 @@ pipeline {
             }
         }
 
+        stage('List Files') {
+            steps {
+                sh 'ls -la'
+                sh 'find . -name "*.py" -type f'
+            }
+        }
+
         stage('Edit app.py') {
             steps {
                 script {
-                    // Read the file
-                    def content = readFile('app.py')
+                    // Check if app/app.py exists (correct path based on project structure)
+                    def fileExists = sh(script: 'test -f app/app.py && echo "true" || echo "false"', returnStdout: true).trim()
                     
-                    // Edit text - replace 'old_text' with 'new_text'
-                    def updatedContent = content.replace('old_text', 'new_text')
-                    
-                    // Write the updated content back
-                    writeFile file: 'app.py', text: updatedContent
+                    if (fileExists == 'true') {
+                        // Read the file
+                        def content = readFile('app/app.py')
+                        
+                        // Edit text - replace 'old_text' with 'new_text'
+                        def updatedContent = content.replace('old_text', 'new_text')
+                        
+                        // Write the updated content back
+                        writeFile file: 'app/app.py', text: updatedContent
+                    } else {
+                        echo 'app/app.py not found! Creating a new one...'
+                        sh 'mkdir -p app'
+                        writeFile file: 'app/app.py', text: '# New app.py created by Jenkins\nprint("Hello World")\n'
+                    }
                 }
             }
         }
 
         stage('Verify Changes') {
             steps {
-                sh 'cat app.py'
+                sh 'cat app/app.py'
             }
         }
 
@@ -39,7 +55,7 @@ pipeline {
                     sh '''
                         git config user.email "jenkins@example.com"
                         git config user.name "Jenkins"
-                        git add app.py
+                        git add app/app.py
                         git commit -m "Updated app.py via Jenkins" || echo "No changes to commit"
                         git push https://${GIT_USER}:${GIT_PASS}@github.com/KoniPN/pscp.git HEAD:${BRANCH}
                     '''
