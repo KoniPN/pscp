@@ -27,9 +27,9 @@ spec:
           ports:
             - containerPort: 5000
               name: http
-          env:
-            - name: HELLO_MESSAGE
-              value: "Hello World from Kubernetes!" # เปลี่ยนข้อความตรงนี้
+          envFrom:
+            - configMapRef:
+                name: hello-world-config
           resources:
             requests:
               cpu: "100m"
