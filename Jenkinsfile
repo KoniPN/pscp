@@ -29,8 +29,8 @@ pipeline {
                         // Read the file
                         def content = readFile('app/app.py')
                         
-                        // Edit text - replace 'old_text' with 'new_text'
-                        def updatedContent = content.replace('old_text', 'new_text')
+                        // Edit the MESSAGE text in app.py
+                        def updatedContent = content.replace('Hello World from Kubernetes!', 'Hello from Jenkins CI/CD Pipeline!')
                         
                         // Write the updated content back
                         writeFile file: 'app/app.py', text: updatedContent
