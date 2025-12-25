@@ -5,5 +5,5 @@ metadata:
   name: hello-world-config
   namespace: hello-world
 data:
-  HELLO_MESSAGE: "Hello World from Kubernetes!"
+  HELLO_MESSAGE: "Test this F jen"
   APP_ENV: "production"
