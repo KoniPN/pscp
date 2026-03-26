@@ -3,7 +3,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: hello-world
+  name: dev-hello-world
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
